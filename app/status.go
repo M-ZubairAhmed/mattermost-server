@@ -4,6 +4,8 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/mattermost/mattermost-server/mlog"
 	"github.com/mattermost/mattermost-server/model"
 	"github.com/mattermost/mattermost-server/utils"
@@ -172,7 +174,7 @@ func (a *App) SetStatusLastActivityAt(userId string, activityAt int64) {
 	a.SetStatusAwayIfNeeded(userId, false)
 }
 
-func (a *App) SetStatusOnline(userId string, manual bool) {
+func (a *App) SetStatusOnline(recievedStatus *model.Status, manual bool) {
 	if !*a.Config().ServiceSettings.EnableUserStatuses {
 		return
 	}
@@ -185,8 +187,16 @@ func (a *App) SetStatusOnline(userId string, manual bool) {
 	var status *model.Status
 	var err *model.AppError
 
-	if status, err = a.GetStatus(userId); err != nil {
-		status = &model.Status{UserId: userId, Status: model.STATUS_ONLINE, Manual: false, LastActivityAt: model.GetMillis(), ActiveChannel: ""}
+	if status, err = a.GetStatus(recievedStatus.UserId); err != nil {
+		status = &model.Status{
+			UserId:         recievedStatus.UserId,
+			Status:         model.STATUS_ONLINE,
+			Manual:         false,
+			LastActivityAt: model.GetMillis(),
+			ActiveChannel:  "",
+			CustomText:     recievedStatus.CustomText,
+		}
+
 		broadcast = true
 	} else {
 		if status.Manual && !manual {
@@ -204,6 +214,7 @@ func (a *App) SetStatusOnline(userId string, manual bool) {
 		status.Status = model.STATUS_ONLINE
 		status.Manual = false // for "online" there's no manual setting
 		status.LastActivityAt = model.GetMillis()
+		status.CustomText = recievedStatus.CustomText
 	}
 
 	a.AddStatusCache(status)
@@ -213,11 +224,11 @@ func (a *App) SetStatusOnline(userId string, manual bool) {
 	if status.Status != oldStatus || status.Manual != oldManual || status.LastActivityAt-oldTime > model.STATUS_MIN_UPDATE_TIME {
 		if broadcast {
 			if err := a.Srv.Store.Status().SaveOrUpdate(status); err != nil {
-				mlog.Error("Failed to save status", mlog.String("user_id", userId), mlog.Err(err), mlog.String("user_id", userId))
+				mlog.Error("Failed to save status", mlog.String("user_id", recievedStatus.UserId), mlog.Err(err), mlog.String("user_id", recievedStatus.UserId))
 			}
 		} else {
 			if err := a.Srv.Store.Status().UpdateLastActivityAt(status.UserId, status.LastActivityAt); err != nil {
-				mlog.Error("Failed to save status", mlog.String("user_id", userId), mlog.Err(err), mlog.String("user_id", userId))
+				mlog.Error("Failed to save status", mlog.String("user_id", recievedStatus.UserId), mlog.Err(err), mlog.String("user_id", recievedStatus.UserId))
 			}
 		}
 	}
@@ -281,19 +292,26 @@ func (a *App) SetStatusAwayIfNeeded(userId string, manual bool) {
 	a.SaveAndBroadcastStatus(status)
 }
 
-func (a *App) SetStatusDoNotDisturb(userId string) {
+func (a *App) SetStatusDoNotDisturb(status *model.Status) {
 	if !*a.Config().ServiceSettings.EnableUserStatuses {
 		return
 	}
 
-	status, err := a.GetStatus(userId)
-
+	currentStatus, err := a.GetStatus(status.UserId)
+	fmt.Printf("\n\n\n %+v \n\n\n", currentStatus)
 	if err != nil {
-		status = &model.Status{UserId: userId, Status: model.STATUS_OFFLINE, Manual: false, LastActivityAt: 0, ActiveChannel: ""}
+		status = &model.Status{
+			UserId:         status.UserId,
+			Status:         model.STATUS_OFFLINE,
+			Manual:         false,
+			LastActivityAt: 0,
+			ActiveChannel:  "",
+			CustomText:     "I'm currently offline",
+		}
 	}
 
-	status.Status = model.STATUS_DND
-	status.Manual = true
+	currentStatus.Status = model.STATUS_DND
+	currentStatus.Manual = true
 
 	a.SaveAndBroadcastStatus(status)
 }

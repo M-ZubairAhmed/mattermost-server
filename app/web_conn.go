@@ -48,7 +48,7 @@ type WebConn struct {
 func (a *App) NewWebConn(ws *websocket.Conn, session model.Session, t goi18n.TranslateFunc, locale string) *WebConn {
 	if len(session.UserId) > 0 {
 		a.Srv.Go(func() {
-			a.SetStatusOnline(session.UserId, false)
+			a.SetStatusOnline(&model.Status{UserId: session.UserId}, false)
 			a.UpdateLastActivityAtIfNeeded(session)
 		})
 	}

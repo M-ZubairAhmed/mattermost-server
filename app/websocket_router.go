@@ -55,7 +55,7 @@ func (wr *WebSocketRouter) ServeWebSocket(conn *WebConn, r *model.WebSocketReque
 		}
 
 		wr.app.Srv.Go(func() {
-			wr.app.SetStatusOnline(session.UserId, false)
+			wr.app.SetStatusOnline(&model.Status{UserId: session.UserId}, false)
 			wr.app.UpdateLastActivityAtIfNeeded(*session)
 		})
 

@@ -48,7 +48,7 @@ func (api *API) userUpdateActiveStatus(req *model.WebSocketRequest) (map[string]
 	}
 
 	if userIsActive {
-		api.App.SetStatusOnline(req.Session.UserId, manual)
+		api.App.SetStatusOnline(&model.Status{UserId: req.Session.UserId}, manual)
 	} else {
 		api.App.SetStatusAwayIfNeeded(req.Session.UserId, manual)
 	}

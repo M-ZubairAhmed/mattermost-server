@@ -257,13 +257,13 @@ func (api *PluginAPI) GetUserStatusesByIds(userIds []string) ([]*model.Status, *
 func (api *PluginAPI) UpdateUserStatus(userId, status string) (*model.Status, *model.AppError) {
 	switch status {
 	case model.STATUS_ONLINE:
-		api.app.SetStatusOnline(userId, true)
+		api.app.SetStatusOnline(&model.Status{UserId: userId}, true)
 	case model.STATUS_OFFLINE:
 		api.app.SetStatusOffline(userId, true)
 	case model.STATUS_AWAY:
 		api.app.SetStatusAwayIfNeeded(userId, true)
 	case model.STATUS_DND:
-		api.app.SetStatusDoNotDisturb(userId)
+		api.app.SetStatusDoNotDisturb(&model.Status{UserId: userId})
 	default:
 		return nil, model.NewAppError("UpdateUserStatus", "plugin.api.update_user_status.bad_status", nil, "unrecognized status", http.StatusBadRequest)
 	}
